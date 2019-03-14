@@ -37,7 +37,7 @@ def parse_fun(serialized_example):
     depth = tf.cast(features['depth'], tf.int32)
     image = tf.decode_raw(features['image'], tf.float32)
     image = tf.reshape(image, shape=[height * width * depth])
-    image.set_shape([28 * 28 * 1])
+    image.set_shape([64 * 64 * 1])
     image = tf.cast(image, tf.float32) * (1. / 255)
     label = tf.cast(features['label'], tf.int32)
     features = {'images': image, 'labels': label}
@@ -57,20 +57,6 @@ class DataLoader(object):
             path: Path to store data.
             name: Name for the operations.
         """
-
-        # path exists and is writable?
-        if path is None:
-            path = os.path.join(os.environ["HOME"], ".cache", "capslayer", "datasets", "mnist")
-            os.makedirs(path, exist_ok=True)
-        elif os.access(path, os.F_OK):
-            path = path if os.path.basename(path) == "mnist" else os.path.join(path, "mnist")
-            os.makedirs(path, exist_ok=True)
-        elif os.access(path, os.W_OK):
-            raise IOError("Permission denied! Path %s is not writable." % (str(path)))
-
-        # data downloaded and data extracted?
-        maybe_download_and_extract("mnist", path)
-        # data tfrecorded?
         tfrecord_runner(path, force=False)
         self.handle = tf.placeholder(tf.string, shape=[])
         self.next_element = None
@@ -85,7 +71,7 @@ class DataLoader(object):
         """
         with tf.name_scope(self.name):
             mode = mode.lower()
-            modes = ["train", "test", "eval"]
+            modes = ["train", "test"]
             if mode not in modes:
                 raise "mode not found! supported modes are " + modes
             filenames = [os.path.join(self.path, "%s_mnist.tfrecord" % mode)]
@@ -97,9 +83,6 @@ class DataLoader(object):
                 dataset = dataset.shuffle(buffer_size=50000)
                 dataset = dataset.repeat()
                 iterator = dataset.make_one_shot_iterator()
-            elif mode == "eval":
-                dataset = dataset.repeat(1)
-                iterator = dataset.make_initializable_iterator()
             elif mode == "test":
                 dataset = dataset.repeat(1)
                 iterator = dataset.make_one_shot_iterator()
